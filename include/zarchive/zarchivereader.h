@@ -27,6 +27,7 @@ public:
 	};
 
 	static ZArchiveReader* OpenFromFile(const std::filesystem::path& path);
+	static ZArchiveReader* OpenFromStream(std::unique_ptr<std::istream>&& stream);
 
 	~ZArchiveReader();
 
@@ -61,6 +62,7 @@ private:
 	std::unordered_map<uint64_t, CacheBlock*> m_blockLookup;
 
 	ZArchiveReader(std::ifstream&& file, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize);
+	ZArchiveReader(std::unique_ptr<std::istream>&& stream, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize);
 
 	CacheBlock* GetCachedBlock(uint64_t blockIndex);
 	CacheBlock* RecycleLRUBlock(uint64_t newBlockIndex);

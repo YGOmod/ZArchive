@@ -28,11 +28,10 @@ static uint64_t _getValidElementCount(uint64_t size, uint64_t elementSize)
 
 ZArchiveReader* ZArchiveReader::OpenFromFile(const std::filesystem::path& path)
 {
-	std::ifstream file;
-	file.open(path, std::ios_base::in | std::ios_base::binary);
-	if (!file.is_open())
-		return nullptr;
-	return ZArchiveReader::OpenFromStream(std::make_unique<std::ifstream>(std::move(file)));
+    auto file = std::make_unique<std::ifstream>(path, std::ios_base::in | std::ios_base::binary);
+    if (!file->is_open())
+        return nullptr;
+    return ZArchiveReader::OpenFromStream(std::move(file));
 }
 
 ZArchiveReader* ZArchiveReader::OpenFromStream(std::unique_ptr<std::istream>&& file)
@@ -42,7 +41,7 @@ ZArchiveReader* ZArchiveReader::OpenFromStream(std::unique_ptr<std::istream>&& f
 		return nullptr;
 	// read footer
 	_ZARCHIVE::Footer footer;
-	if (!_istream_readBytes(*file, fileSize - sizeof(_ZARCHIVE::Footer), &footer, sizeof(_ZARCHIVE::Footer)))
+	if (!_istream_readBytes(*file., fileSize - sizeof(_ZARCHIVE::Footer), &footer, sizeof(_ZARCHIVE::Footer)))
 		return nullptr;
 	_ZARCHIVE::Footer::Deserialize(&footer, &footer);
 	// validate footer
@@ -348,9 +347,9 @@ bool ZArchiveReader::LoadBlock(CacheBlock* block)
 	if (compressedSize == _ZARCHIVE::COMPRESSED_BLOCK_SIZE)
 	{
 		// uncompressed block, read directly into cached block
-		return _istream_readBytes(*m_file, offset, block->data, compressedSize);
+		return _istream_readBytes(*(m_file.get()), offset, block->data, compressedSize);
 	}
-	if (!_istream_readBytes(*m_file, offset, m_blockDecompressionBuffer.data(), compressedSize))
+	if (!_istream_readBytes(*(m_file.get()), offset, m_blockDecompressionBuffer.data(), compressedSize))
 		return false;
 	// decompress
 	size_t outputSize = ZSTD_decompress(block->data, _ZARCHIVE::COMPRESSED_BLOCK_SIZE, m_blockDecompressionBuffer.data(), compressedSize);

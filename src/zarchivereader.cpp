@@ -41,7 +41,7 @@ ZArchiveReader* ZArchiveReader::OpenFromStream(std::unique_ptr<std::istream>&& f
 		return nullptr;
 	// read footer
 	_ZARCHIVE::Footer footer;
-	if (!_istream_readBytes(*file., fileSize - sizeof(_ZARCHIVE::Footer), &footer, sizeof(_ZARCHIVE::Footer)))
+	if (!_istream_readBytes(*file, fileSize - sizeof(_ZARCHIVE::Footer), &footer, sizeof(_ZARCHIVE::Footer)))
 		return nullptr;
 	_ZARCHIVE::Footer::Deserialize(&footer, &footer);
 	// validate footer
@@ -99,31 +99,31 @@ ZArchiveReader::ZArchiveReader(std::ifstream&& file, std::vector<_ZARCHIVE::Comp
 {
 }
 
-ZArchiveReader::ZArchiveReader(std::unique_ptr<std::istream>&& stream, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize) :
-	m_file(std::move(stream)), m_offsetRecords(std::move(offsetRecords)), m_nameTable(std::move(nameTable)), m_fileTree(std::move(fileTree)),
-	m_compressedDataOffset(compressedDataOffset), m_compressedDataSize(compressedDataSize)
+ZArchiveReader::ZArchiveReader(std::unique_ptr<std::istream>&& file, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize)
+    : m_file(std::move(file)), m_offsetRecords(std::move(offsetRecords)), m_nameTable(std::move(nameTable)), m_fileTree(std::move(fileTree)),
+      m_compressedDataOffset(compressedDataOffset), m_compressedDataSize(compressedDataSize)
 {
-	m_blockCount = (uint64_t)m_offsetRecords.size() * _ZARCHIVE::ENTRIES_PER_OFFSETRECORD;
-	m_blockDecompressionBuffer.resize(_ZARCHIVE::COMPRESSED_BLOCK_SIZE);
-	// init cache
-	uint64_t cacheSize = 1024 * 1024 * 4; // 4MiB
-	if ((cacheSize % _ZARCHIVE::COMPRESSED_BLOCK_SIZE) != 0)
-		cacheSize += (_ZARCHIVE::COMPRESSED_BLOCK_SIZE - (cacheSize % _ZARCHIVE::COMPRESSED_BLOCK_SIZE));
-	m_cacheDataBuffer.resize(cacheSize);
-	// create cache blocks and init LRU chain
-	m_cacheBlocks.resize(cacheSize / _ZARCHIVE::COMPRESSED_BLOCK_SIZE);
-	m_lruChainFirst = m_cacheBlocks.data() + 0;
-	m_lruChainLast = m_cacheBlocks.data() + m_cacheBlocks.size() - 1;
-	CacheBlock* prevBlock = nullptr;
-	for (size_t i = 0; i < m_cacheBlocks.size(); i++)
-	{
-		m_cacheBlocks[i].blockIndex = 0xFFFFFFFFFFFFFFFF;
-		m_cacheBlocks[i].data = m_cacheDataBuffer.data() + i * _ZARCHIVE::COMPRESSED_BLOCK_SIZE;
-		m_cacheBlocks[i].prev = prevBlock;
-		m_cacheBlocks[i].next = m_cacheBlocks.data() + i + 1;
-		prevBlock = m_cacheBlocks.data() + i;
-	}
-	m_cacheBlocks.back().next = nullptr;
+    m_blockCount = (uint64_t)m_offsetRecords.size() * _ZARCHIVE::ENTRIES_PER_OFFSETRECORD;
+    m_blockDecompressionBuffer.resize(_ZARCHIVE::COMPRESSED_BLOCK_SIZE);
+    // init cache
+    uint64_t cacheSize = 1024 * 1024 * 4; // 4MiB
+    if ((cacheSize % _ZARCHIVE::COMPRESSED_BLOCK_SIZE) != 0)
+        cacheSize += (_ZARCHIVE::COMPRESSED_BLOCK_SIZE - (cacheSize % _ZARCHIVE::COMPRESSED_BLOCK_SIZE));
+    m_cacheDataBuffer.resize(cacheSize);
+    // create cache blocks and init LRU chain
+    m_cacheBlocks.resize(cacheSize / _ZARCHIVE::COMPRESSED_BLOCK_SIZE);
+    m_lruChainFirst = m_cacheBlocks.data() + 0;
+    m_lruChainLast = m_cacheBlocks.data() + m_cacheBlocks.size() - 1;
+    CacheBlock* prevBlock = nullptr;
+    for (size_t i = 0; i < m_cacheBlocks.size(); i++)
+    {
+        m_cacheBlocks[i].blockIndex = 0xFFFFFFFFFFFFFFFF;
+        m_cacheBlocks[i].data = m_cacheDataBuffer.data() + i * _ZARCHIVE::COMPRESSED_BLOCK_SIZE;
+        m_cacheBlocks[i].prev = prevBlock;
+        m_cacheBlocks[i].next = m_cacheBlocks.data() + i + 1;
+        prevBlock = m_cacheBlocks.data() + i;
+    }
+    m_cacheBlocks.back().next = nullptr;
 }
 
 ZArchiveReader::~ZArchiveReader()

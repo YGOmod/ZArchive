@@ -94,8 +94,8 @@ ZArchiveReader* ZArchiveReader::OpenFromStream(std::unique_ptr<std::istream>&& f
 	return cfs;
 }
 
-ZArchiveReader::ZArchiveReader(std::ifstream&& file, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize)
-    : ZArchiveReader(std::make_unique<std::ifstream>(std::move(file)), std::move(offsetRecords), std::move(nameTable), std::move(fileTree), compressedDataOffset, compressedDataSize)
+ZArchiveReader::ZArchiveReader(std::unique_ptr<std::ifstream>&& file, std::vector<_ZARCHIVE::CompressionOffsetRecord>&& offsetRecords, std::vector<uint8_t>&& nameTable, std::vector<_ZARCHIVE::FileDirectoryEntry>&& fileTree, uint64_t compressedDataOffset, uint64_t compressedDataSize)
+    : ZArchiveReader(std::move(file), std::move(offsetRecords), std::move(nameTable), std::move(fileTree), compressedDataOffset, compressedDataSize)
 {
 }
 

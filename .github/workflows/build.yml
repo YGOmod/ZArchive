@@ -9,37 +9,19 @@ on:
         default: 'master'
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  build-arm64:
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
         build_type: [Release]
         c_compiler: [gcc, clang]
-        arch: [x64, arm64]
         include:
-          - os: ubuntu-latest
-            arch: x64
-            c_compiler: gcc
+          - c_compiler: gcc
             cpp_compiler: g++
-          - os: ubuntu-latest
-            arch: x64
-            c_compiler: clang
+          - c_compiler: clang
             cpp_compiler: clang++
-          - os: ubuntu-latest
-            arch: arm64
-            c_compiler: gcc
-            cpp_compiler: g++
-          - os: ubuntu-latest
-            arch: arm64
-            c_compiler: clang
-            cpp_compiler: clang++
-          - os: windows-latest
-            arch: x64
-            c_compiler: cl
-            cpp_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
@@ -50,50 +32,28 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Setup QEMU for ARM64
-      if: matrix.arch == 'arm64'
-      uses: docker://multiarch/ubuntu-core:arm64-focal
-      with:
-        args: >
-          cmake -B ${{ steps.strings.outputs.build-output-dir }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake
-          -DBUILD_STATIC_TOOL=ON
-          -S ${{ github.workspace }}
+    - name: Install Cross-Compilation Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y crossbuild-essential-arm64
+        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-    - name: Configure CMake (Linux x64)
-      if: matrix.os == 'ubuntu-latest' && matrix.arch == 'x64'
+    - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=aarch64-linux-gnu-${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake
-        -DBUILD_STATIC_TOOL=ON
-        -S ${{ github.workspace }}
-
-    - name: Configure CMake (Windows)
-      if: matrix.os == 'windows-latest'
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+        -DCMAKE_SYSTEM_NAME=Linux
+        -DCMAKE_SYSTEM_PROCESSOR=aarch64
         -DBUILD_STATIC_TOOL=ON
         -S ${{ github.workspace }}
 
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --build-config ${{ matrix.build_type }}
-    
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: zarchive-build-${{matrix.os}}-${{matrix.arch}}-${{matrix.build_type}}-${{matrix.c_compiler}}
+        name: zarchive-build-arm64-${{matrix.build_type}}-${{matrix.c_compiler}}
         path: ${{ steps.strings.outputs.build-output-dir }}

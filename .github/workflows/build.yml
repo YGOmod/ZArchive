@@ -52,7 +52,7 @@ jobs:
 
     - name: Setup QEMU for ARM64
       if: matrix.arch == 'arm64'
-      uses: docker://multiarch/ubuntu-core:arm64
+      uses: docker://multiarch/ubuntu-core:arm64-focal
       with:
         args: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}

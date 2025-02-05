@@ -20,8 +20,12 @@ jobs:
         include:
           - c_compiler: gcc
             cpp_compiler: g++
+            c_compiler_path: /usr/bin/aarch64-linux-gnu-gcc
+            cpp_compiler_path: /usr/bin/aarch64-linux-gnu-g++
           - c_compiler: clang
             cpp_compiler: clang++
+            c_compiler_path: /usr/bin/clang
+            cpp_compiler_path: /usr/bin/clang++
 
     steps:
     - uses: actions/checkout@v4
@@ -37,15 +41,21 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y crossbuild-essential-arm64
         sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+        sudo apt-get install -y clang lld
 
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=aarch64-linux-gnu-${{ matrix.c_compiler }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler_path }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler_path }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_SYSTEM_NAME=Linux
         -DCMAKE_SYSTEM_PROCESSOR=aarch64
+        -DCMAKE_CROSSCOMPILING=TRUE
+        -DCMAKE_SYSTEM_VERSION=1
+        -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER
+        -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
+        -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
         -DBUILD_STATIC_TOOL=ON
         -S ${{ github.workspace }}
 
